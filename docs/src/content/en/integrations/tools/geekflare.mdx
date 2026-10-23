@@ -1,0 +1,181 @@
+---
+title: 'Geekflare | Tools'
+description: 'Add Geekflare web search, page scraping, brand data, screenshot, and website check tools to Mastra agents with typed Zod inputs and outputs.'
+packages:
+  - '@mastra/core'
+  - '@mastra/geekflare'
+---
+
+# Geekflare
+
+[Geekflare](https://geekflare.com/api) gives agents live web data through one API key: web search, including the full Google results page by country or city, page content as Markdown or JSON, brand and company data, screenshots, and website checks. The `@mastra/geekflare` package exposes these as Mastra tools.
+
+## Installation
+
+```bash npm2yarn
+npm install @mastra/geekflare
+```
+
+Set your API key. Get one at [geekflare.com/api](https://geekflare.com/api).
+
+```bash title=".env"
+GEEKFLARE_API_KEY=your-api-key
+```
+
+## Quick start
+
+Add every Geekflare tool to an agent:
+
+```typescript
+import { createGeekflareTools } from '@mastra/geekflare'
+
+const tools = createGeekflareTools()
+```
+
+Or create only the tools you need:
+
+```typescript
+import { createGeekflareScrapeTool, createGeekflareSearchTool } from '@mastra/geekflare'
+
+export const searchTool = createGeekflareSearchTool({ apiKey: 'geekflare-api-key' })
+export const scrapeTool = createGeekflareScrapeTool()
+```
+
+The client isn't created until a tool runs, so a missing API key fails at execution time with a configuration error.
+
+## Configuration
+
+All factories accept `GeekflareClientOptions`:
+
+<PropertiesTable
+  content={[
+  {
+    name: 'apiKey',
+    type: 'string',
+    description: 'Geekflare API key. Falls back to the `GEEKFLARE_API_KEY` environment variable.',
+    isOptional: true,
+  },
+  {
+    name: 'baseURL',
+    type: 'string',
+    description: 'Override the API base URL.',
+    isOptional: true,
+    defaultValue: "'https://api.geekflare.com'",
+  },
+  {
+    name: 'timeoutMs',
+    type: 'number',
+    description: 'Request timeout in milliseconds. Lighthouse audits can take a minute or more.',
+    isOptional: true,
+    defaultValue: '180000',
+  },
+  {
+    name: 'fetch',
+    type: 'typeof fetch',
+    description: 'Custom `fetch` implementation.',
+    isOptional: true,
+  },
+]}
+/>
+
+Failed requests throw a `GeekflareAPIError` with the HTTP `status` and the API's message.
+
+## Tools
+
+### `createGeekflareSearchTool()`
+
+Creates the `geekflare-search` tool for web, news, or image search. Set `serp` to get the full Google results page.
+
+<PropertiesTable
+  content={[
+  { name: 'query', type: 'string', description: 'Search query.' },
+  { name: 'limit', type: 'number', description: 'Number of results (1-100).', isOptional: true, defaultValue: '10' },
+  { name: 'source', type: "'web' | 'news' | 'images'", description: 'What to search.', isOptional: true, defaultValue: "'web'" },
+  { name: 'location', type: 'string', description: 'ISO 3166-1 alpha-2 country code for localized results.', isOptional: true },
+  { name: 'city', type: 'string', description: 'City for localized results when `serp` is true.', isOptional: true },
+  { name: 'time', type: 'string', description: 'Recency filter: `h`, `d`, `w`, `m`, `y`, or forms such as `d7`.', isOptional: true },
+  { name: 'includeDomains', type: 'string[]', description: 'Only return results from these domains.', isOptional: true },
+  { name: 'excludeDomains', type: 'string[]', description: 'Exclude results from these domains.', isOptional: true },
+  { name: 'serp', type: 'boolean', description: 'Return the full Google results page: organic results, AI Overview, People Also Ask, and related searches.', isOptional: true },
+]}
+/>
+
+Output: `results`, a list of `{ title, url, snippet, position }`. When `serp` is true, `results` is empty and `serp` holds the full results page.
+
+### `createGeekflareScrapeTool()`
+
+Creates the `geekflare-scrape` tool, which returns a public page's content.
+
+<PropertiesTable
+  content={[
+  { name: 'url', type: 'string', description: 'Page URL. Bare domains such as `example.com` are accepted.' },
+  { name: 'formats', type: 'string[]', description: 'Up to three of `markdown`, `markdown-llm`, `text`, `text-llm`, `html`, `html-llm`, `json`.', isOptional: true, defaultValue: "['markdown']" },
+  { name: 'renderJS', type: 'boolean', description: 'Render JavaScript first. When omitted, Geekflare decides based on the page.', isOptional: true },
+  { name: 'template', type: "'product' | 'contact'", description: 'Ready-made extraction template that returns structured JSON.', isOptional: true },
+]}
+/>
+
+Output: `url` and `content`, keyed by format, for example `{ markdown: '...' }`.
+
+### `createGeekflareBrandTool()`
+
+Creates the `geekflare-brand` tool, which returns a company's brand identity from its website.
+
+<PropertiesTable
+  content={[
+  { name: 'url', type: 'string', description: 'Company website URL or domain.' },
+  { name: 'mode', type: "'standard' | 'enriched'", description: '`enriched` adds company details such as industry, founded year, and employee range.', isOptional: true, defaultValue: "'standard'" },
+]}
+/>
+
+Output: `name`, `domain`, and `brand`, which holds logos, colors, fonts, social profiles, key links (pricing, careers, contact), and company details.
+
+### `createGeekflareScreenshotTool()`
+
+Creates the `geekflare-screenshot` tool.
+
+<PropertiesTable
+  content={[
+  { name: 'url', type: 'string', description: 'Page URL.' },
+  { name: 'fullPage', type: 'boolean', description: 'Capture the full scrollable page.', isOptional: true },
+  { name: 'device', type: "'desktop' | 'mobile'", description: 'Device to emulate.', isOptional: true, defaultValue: "'desktop'" },
+  { name: 'type', type: "'png' | 'jpeg' | 'webp'", description: 'Image format.', isOptional: true, defaultValue: "'png'" },
+  { name: 'selector', type: 'string', description: 'CSS selector to capture a single element.', isOptional: true },
+]}
+/>
+
+Output: `url` and `imageUrl`, a hosted image URL.
+
+### `createGeekflareWebsiteCheckTool()`
+
+Creates the `geekflare-website-check` tool, which runs one check and reports what it finds.
+
+<PropertiesTable
+  content={[
+  { name: 'url', type: 'string', description: 'Website URL or domain.' },
+  { name: 'check', type: "'site_status' | 'dns_records' | 'tls_scan' | 'redirect_check' | 'broken_links' | 'load_time' | 'lighthouse'", description: 'Which check to run. `lighthouse` can take a minute or more.' },
+]}
+/>
+
+Output: `url`, `check`, an optional `message`, and `result`, the check's data.
+
+## Use the tools with an agent
+
+```typescript title="src/mastra/agents/research-agent.ts"
+import { Agent } from '@mastra/core/agent'
+import { createGeekflareTools } from '@mastra/geekflare'
+
+export const researchAgent = new Agent({
+  id: 'research-agent',
+  name: 'Research Agent',
+  model: 'openai/gpt-5.6-sol',
+  instructions:
+    'Use geekflare-search to find sources, geekflare-scrape to read the most relevant pages, and cite URLs in your answer.',
+  tools: createGeekflareTools(),
+})
+```
+
+## Related
+
+- [Geekflare API documentation](https://docs.geekflare.com)
+- [Tools overview](/docs/agents/using-tools)

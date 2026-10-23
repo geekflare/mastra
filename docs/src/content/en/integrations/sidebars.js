@@ -634,6 +634,12 @@ const sidebars = {
         },
         {
           type: 'doc',
+          id: 'tools/geekflare',
+          label: 'Geekflare',
+          customProps: { icon: '/img/integrations/geekflare.svg' },
+        },
+        {
+          type: 'doc',
           id: 'tools/parallel',
           label: 'Parallel',
           customProps: { icon: '/img/integrations/parallel.svg' },
